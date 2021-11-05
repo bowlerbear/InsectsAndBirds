@@ -7,7 +7,7 @@ setwd("C:/Users/db40fysa/Dropbox/DOF/Insects and TTT")
 
 #read in transect squares
 squares <- st_read(dsn = getwd(),
-                    layer = "transect squares utm33")
+                    layer = "transect squares utm32")
 plot(squares)
 head(squares)
 

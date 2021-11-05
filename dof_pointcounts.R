@@ -7,7 +7,7 @@ library(tmap)
 
 #read in transect squares
 squares <- st_read(dsn = "~/Dropbox/DOF/Insects and TTT",
-                   layer = "transect squares utm33")
+                   layer = "transect squares utm32")
 head(squares)
 
 tm_shape(squares)+
