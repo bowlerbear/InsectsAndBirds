@@ -6,7 +6,7 @@ library(tmap)
 ### standard squares ####
 
 #read in transect squares
-squares <- st_read(dsn = "~/Dropbox/DOF/Insects and TTT",
+squares <- st_read(dsn = "data/Insects_and_TTT",
                    layer = "transect squares utm32")
 head(squares)
 
@@ -15,10 +15,8 @@ tm_shape(squares)+
 
 #### bird data ####
 
-setwd("~/Dropbox/DOF/Insects and TTT")
-
 #bird count data
-pointcountData <- read.csv("point_count_data.csv",sep=";")
+pointcountData <- read.csv("data/Insects_and_TTT/point_count_data.csv",sep=";")
 head(pointcountData)
 #obsid - unique species observation ID
 #tid - survey ID (turID) (route and year)
@@ -27,7 +25,7 @@ head(pointcountData)
 #antal - number of birds
 
 #survey data (a survey is a route in a specific year)
-pointcountInfo <- read.csv("point_count_info.csv",sep=";")
+pointcountInfo <- read.csv("data/Insects_and_TTT/point_count_info.csv",sep=";")
 head(pointcountInfo)
 table(pointcountInfo$tyear)
 #tid - survey ID (turID) (route and year)
@@ -39,7 +37,7 @@ table(pointcountInfo$tyear)
 #shift from 20 to 10 points
 
 #route data
-pointSites <- read.csv("point_site_info.csv",sep=";",dec=",")
+pointSites <- read.csv("data/Insects_and_TTT/point_site_info.csv",sep=";",dec=",")
 #rid - routeID
 #oid - observer ID
 #season 
@@ -51,7 +49,7 @@ pointSites <- read.csv("point_site_info.csv",sep=";",dec=",")
 #some points are separated several km but not common
 
 #species code
-speciesCodes <- read.csv("species_codes.csv",sep=";")
+speciesCodes <- read.csv("data/Insects_and_TTT/species_codes.csv",sep=";")
 #arttype - ubestemt (exclude these)
 #check - how many for different species
 

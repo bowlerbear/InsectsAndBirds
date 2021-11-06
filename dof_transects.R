@@ -3,10 +3,8 @@ library(lubridate)
 
 #### birds ####
 
-setwd("C:/Users/db40fysa/Dropbox/DOF/Insects and TTT")
-
 #read in transect squares
-squares <- st_read(dsn = getwd(),
+squares <- st_read(dsn = "data/Insects_and_TTT",
                     layer = "transect squares utm32")
 plot(squares)
 head(squares)
@@ -15,7 +13,7 @@ head(squares)
 #1 km sometimes moved due to waterbodies
 
 #read in transects data where birds were counted
-transects <- st_read(dsn = getwd(),
+transects <- st_read(dsn = "data/Insects_and_TTT",
                      layer = "transects utm32")
 plot(transects)
 head(transects)
@@ -24,7 +22,7 @@ head(transects)
 #lok_grp_id - regional grouping
 
 #read in bird observation data - counts of birds using distance sampling
-data <- read.csv("ttt_data.csv",sep=";")
+data <- read.csv("data/Insects_and_TTT/ttt_data.csv",sep=";")
 head(data)
 #artnr  -species code
 #artnavn - common danish name
@@ -54,7 +52,7 @@ table(data$type,data$Year)
 #vinter  1957  6757  7794  5001  3279
 
 #read in transect info
-info <- read.csv("ttt_info.csv",sep=";")
+info <- read.csv("data/Insects_and_TTT/ttt_info.csv",sep=";")
 #tidfra - start time
 #tidtil - end time
 #skydaekke - cloud cover 1 to 3 - low(0-33) to high (66-100)
