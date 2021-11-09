@@ -89,4 +89,5 @@ tm_shape(squares_buffer)+
 tm_shape(squares_buffer)+
   tm_fill("forest")  
 
-saveRDS(squares_buffer,file="squares_buffer.rds")
+saveRDS(squares_buffer,file="squares_buffer_1km.rds")
+saveRDS(squares_buffer,file="squares_buffer_5km.rds")
