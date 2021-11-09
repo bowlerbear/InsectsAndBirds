@@ -1,3 +1,4 @@
+library(tidyverse)
 library(sf)
 library(lubridate)
 
@@ -8,6 +9,14 @@ squares <- st_read(dsn = "data/Insects_and_TTT",
                     layer = "transect squares utm32")
 plot(squares)
 head(squares)
+
+#group into the kvadratnr??
+squares <- squares %>%
+            dplyr::group_by(kvadratnr) %>%
+            dplyr::summarise()
+  
+plot(squares)
+
 
 #also grouped into 5 x 5 km squares (previous atlas data presence/absence)
 #1 km sometimes moved due to waterbodies
