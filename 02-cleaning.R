@@ -6,18 +6,40 @@ library(tmap)
 
 # =================== reference grid, bird atlas =================== 
 # transect squares -- reference grid (kvadratnr)
-tm_shape(squares32) +
-  tm_fill("kvadratnr") +
-  tm_grid()
+squares32_map <- tm_shape(squares32) +
+  tm_borders() +
+  tm_grid() +
+  tm_layout(legend.outside = TRUE, main.title = "Reference grid: bird atlas transect squares UTM32")
+# tmap_save(tm = squares32_map,
+#           filename = paste0("output", "/", "transect_squares_utm32.png"))
+# rm(squares32_map)
 
-tm_shape(squares33) +
-  tm_fill("kvadratnr") +
-  tm_grid()
+squares33_map <- tm_shape(squares33) +
+  tm_borders() +
+  tm_grid() +
+  tm_layout(legend.outside = TRUE, main.title = "Bird atlas transect squares UTM32")
+# tmap_save(tm = squares33_map,
+#           filename = paste0("output", "/", "transect_squares_utm33.png"))
+# rm(squares33_map)
 
 
 # transects data where birds were counted
-transects32
-transects33
+# transects32
+# tm_shape(transects32) +
+#   tm_lines() +
+#   tm_grid()
+
+squares32_transects32_map <- tm_shape(squares32) +
+  tm_borders() +
+  tm_shape(transects32) +
+  tm_lines(col="red", alpha=0.7) +
+  tm_grid() +
+  tm_layout(legend.outside = TRUE, main.title = "Bird atlas transect squares and transects UTM32")
+# tmap_save(tm = squares32_transects32_map,
+#           filename = paste0("output", "/", "transect_squares_and_transects_utm32.png"))
+# rm(squares32_transects32_map)
+
+# transects33
 
 
 # bird atlas
@@ -31,22 +53,39 @@ table(bird_atlas$type,bird_atlas$year)
 #tidlig  6663  6901 11558 10399     0   # early (not includes some migrants)
 #vinter  1957  6757  7794  5001  3279
 
+num_type_year_bird_atlas_bar <- bird_atlas %>% 
+  count(year, type) %>% 
+  ggplot() + 
+  geom_bar(aes(x=year, y=n, fill=type), stat="identity", position="dodge") +
+  ylab("number") + 
+  ggtitle("Number of samples per year, grouped by type, in bird atlas")
+# ggsave(filename = paste0("output", "/", "num_type_year_bird_atlas.png"), num_type_year_bird_atlas_bar)
+# rm(num_type_year_bird_atlas_bar)
+
 
 # how many kvadratnr were sampled each year
-bird_atlas %>% 
+num_kvadratnr_per_year_bar <- bird_atlas %>% 
   group_by(year) %>% 
   summarise(n_distinct(kvadratnr)) %>% 
   rename(number_of_unique_kvadratnr = `n_distinct(kvadratnr)`) %>% 
   ggplot() +
-  geom_col(aes(x=year, y=number_of_unique_kvadratnr))
+  geom_col(aes(x=year, y=number_of_unique_kvadratnr)) +
+  ylab("number") + 
+  ggtitle("Number of unique kvadratnr sampled per year")
+# ggsave(filename = paste0("output", "/", "num_unique_kvadratnr_per_year.png"), num_kvadratnr_per_year_bar)
+# rm(num_kvadratnr_per_year_bar)
 
 # only sen
-bird_atlas %>% filter(type=="sen") %>% 
+num_kvadratnr_per_year_sen_bar <- bird_atlas %>% filter(type=="sen") %>% 
   group_by(year) %>% 
   summarise(n_distinct(kvadratnr)) %>% 
   rename(number_of_unique_kvadratnr = `n_distinct(kvadratnr)`) %>% 
   ggplot() +
-  geom_col(aes(x=year, y=number_of_unique_kvadratnr))
+  geom_col(aes(x=year, y=number_of_unique_kvadratnr)) +
+  ylab("number") + 
+  ggtitle("Number of unique kvadratnr sampled per year (only type = sen)")
+# ggsave(filename = paste0("output", "/", "num_unique_kvadratnr_per_year_sen.png"), num_kvadratnr_per_year_sen_bar)
+# rm(num_kvadratnr_per_year_sen_bar)
 
 
 # transect info
@@ -75,13 +114,21 @@ transect_info %>% filter(type=="sen") %>%
 # one more data point in 2015 and 2017 than in bird atlas
 
 
+# subset sen (late summer)
+bird_atlas_sen <- bird_atlas %>% filter(type=="sen")
+table(bird_atlas_sen$year)
+
 
 
 
 # =================== bird point count =================== 
 # species code
 ## check - how many for different species
+species_codes %>% 
+  summarise(n_distinct(latin))
 
+species_codes %>% 
+  summarise(n_distinct(english))
 
 
 # survey data (a survey is a route in a specific year)
@@ -147,9 +194,14 @@ bird_count_merged <- bird_count_merged %>%
 bird_count_sf <- st_as_sf(bird_count_merged, coords = c("lon","lat"), crs = 4326)
 
 # plot and check
-tm_shape(bird_count_sf) +
-  tm_dots("rid") +
-  tm_grid()
+bird_count_map <- tm_shape(bird_count_sf) +
+  tm_dots("red") +
+  tm_grid() +
+  tm_layout(legend.outside = TRUE, main.title = "Bird count locations")
+# tmap_save(tm = bird_count_map,
+#           filename = paste0("output", "/", "bird_count_map.png"))
+# rm(bird_count_map)
+
 
 
 
@@ -169,11 +221,18 @@ squares_sf <- squares_sp %>% st_as_sf()
 ## https://www.andybeger.com/2014/03/29/associating-points-with-polygons-in-r/
 ## https://gis.stackexchange.com/questions/324378/identify-polygon-grid-in-which-the-point-belongs-to
 
-tm_shape(squares_sf) +
-  tm_polygons() +
+
+# visualis both points and grid
+intersect_bird_count_transect_squares_map <- tm_shape(squares_sf) +
+  tm_borders() +
   tm_shape(bird_count_sf) +
-  tm_dots("rid") +
-  tm_grid()
+  tm_dots(col="red", alpha=0.7) +
+  tm_grid() +
+  tm_layout(legend.outside = TRUE, main.title = "Intersection of CS bird counts and bird atlas transect squares", main.title.size = 1)
+# tmap_save(tm = intersect_bird_count_transect_squares_map,
+#           filename = paste0("output", "/", "intersect_bird_count_transect_squares.png"))
+# rm(intersect_bird_count_transect_squares_map)
+
 
 raster::extent(squares_sf)
 raster::extent(bird_count_sf)
@@ -181,9 +240,36 @@ raster::extent(bird_count_sf)
 bird_count_sp <- as(bird_count_sf, "Spatial")
 
 # over() to match up points and polygons
-intersect_bird_count_squares_sp <- cbind(bird_count_sp, sp::over(bird_count_sp, squares_sp))
+intersect_bird_count_squares <- sp::over(squares_sp, bird_count_sp)
+intersect_bird_count_squares <- intersect_bird_count_squares %>% tibble()
+intersect_bird_count_squares %>% nrow() # 12334
+intersect_bird_count_squares %>% filter(!is.na(rid)) %>% nrow() # 274 (2.22% intersected)
 
-intersect_bird_count_squares_sf <- intersect_bird_count_squares_sp %>% st_as_sf()
-# intersect_bird_count_squares_sp %>% filter(!is.na(rid))
+# make sf 
+intersect_bird_count_squares <- intersect_bird_count_squares %>% filter(!is.na(rid))
+intersect_bird_count_squares_sf <- intersect_bird_count_squares %>%
+  inner_join((bird_count_sites %>% select(rid,lon,lat)), by="rid") %>% 
+  st_as_sf(coords = c("lon","lat"), crs = 4326)
+
+# visualise the intersected points
+intersect_bird_count_transect_squares_map_2 <- tm_shape(squares_sf) +
+  tm_borders() +
+  tm_shape(bird_count_sf) +
+  tm_dots(col="red", alpha=0.7) +
+  tm_shape(intersect_bird_count_squares_sf) +
+  tm_dots(col="cyan", alpha=0.7) +
+  tm_grid() +
+  tm_layout(legend.outside = TRUE, main.title = "Intersection of CS bird counts and bird atlas transect squares", main.title.size = 1) +
+  tm_credits(text="Intersected points denoted by cyan", position="left")
+# tmap_save(tm = intersect_bird_count_transect_squares_map_2,
+#           filename = paste0("output", "/", "intersect_bird_count_transect_squares_2.png"))
+# rm(intersect_bird_count_transect_squares_map_2)
+
+
+
+
+# =================== insect routes =================== 
+insect_routes2018 
+
 
 

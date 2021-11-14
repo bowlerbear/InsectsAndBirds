@@ -44,5 +44,5 @@ vignettes/*.pdf
 #ignore all data file
 data/*
 
-
+/output/
 /tmp/
