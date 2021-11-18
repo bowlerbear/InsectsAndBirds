@@ -11,9 +11,11 @@ squares32_map <- tm_shape(squares32) +
   tm_grid() +
   tm_layout(legend.outside = TRUE, main.title = "Reference grid: bird atlas transect squares UTM32")
 # tmap_save(tm = squares32_map,
-#           filename = paste0("output", "/", "transect_squares_utm32.png"))
+#           filename = paste0("output", "/", "transect_squares_1x1_utm32.png"))
 # rm(squares32_map)
 
+
+# transect squares (UTM 33)
 squares33_map <- tm_shape(squares33) +
   tm_borders() +
   tm_grid() +
@@ -36,7 +38,7 @@ squares32_transects32_map <- tm_shape(squares32) +
   tm_grid() +
   tm_layout(legend.outside = TRUE, main.title = "Bird atlas transect squares and transects UTM32")
 # tmap_save(tm = squares32_transects32_map,
-#           filename = paste0("output", "/", "transect_squares_and_transects_utm32.png"))
+#           filename = paste0("output", "/", "transect_squares_and_transects_1x1_utm32.png"))
 # rm(squares32_transects32_map)
 
 # transects33
@@ -207,13 +209,13 @@ bird_count_map <- tm_shape(bird_count_sf) +
 
 
 # =================== match bird point count to reference grid =================== 
-# set crs to UTM42
-squares32
+# reproject from utm to longlat
+raster::crs(squares32)
 
-# reproject data
 squares32_sp <- as(squares32, "Spatial")
 squares_sp <- sp::spTransform(squares32_sp, raster::crs(bird_count_sf))
 squares_sf <- squares_sp %>% st_as_sf()
+raster::crs(squares_sf)
 
 
 # check points grid intersection
@@ -230,13 +232,14 @@ intersect_bird_count_transect_squares_map <- tm_shape(squares_sf) +
   tm_grid() +
   tm_layout(legend.outside = TRUE, main.title = "Intersection of CS bird counts and bird atlas transect squares", main.title.size = 1)
 # tmap_save(tm = intersect_bird_count_transect_squares_map,
-#           filename = paste0("output", "/", "intersect_bird_count_transect_squares.png"))
+#           filename = paste0("output", "/", "intersect_bird_count_transect_squares_1x1.png"))
 # rm(intersect_bird_count_transect_squares_map)
 
-
+# check extents
 raster::extent(squares_sf)
 raster::extent(bird_count_sf)
 
+# transform to sp to use over() 
 bird_count_sp <- as(bird_count_sf, "Spatial")
 
 # over() to match up points and polygons
@@ -261,10 +264,73 @@ intersect_bird_count_transect_squares_map_2 <- tm_shape(squares_sf) +
   tm_grid() +
   tm_layout(legend.outside = TRUE, main.title = "Intersection of CS bird counts and bird atlas transect squares", main.title.size = 1) +
   tm_credits(text="Intersected points denoted by cyan", position="left")
-# tmap_save(tm = intersect_bird_count_transect_squares_map_2,
-#           filename = paste0("output", "/", "intersect_bird_count_transect_squares_2.png"))
+# tmap_save(tm = intersect_bird_count_transect_squares_map,
+#           filename = paste0("output", "/", "intersect_bird_count_transect_squares_1x1_highlighted.png"))
 # rm(intersect_bird_count_transect_squares_map_2)
 
+
+
+# change polygon size (5x5 grid) for interaction
+# try out buffer with 2km
+squares32 %>% st_buffer(dist=2000) %>% 
+  tm_shape() +
+  tm_borders() +
+  tm_grid()
+
+# check area of each polygon
+shape_tmp <- raster::shapefile("data/Insects_and_TTT/transect squares utm32.shp")
+unique(raster::area(shape_tmp) / 1000000)
+rm(shape_tmp)
+# all 1 km2
+
+
+# transform to 5x5km square
+squares32 %>% st_centroid() %>% 
+  tm_shape() +
+  tm_dots() +
+  tm_grid()
+
+squares32 %>% st_centroid() %>% 
+  st_buffer(dist=2500, endCapStyle="SQUARE") %>% # radius of 2.5km = 5x5km square
+  tm_shape() +
+  tm_borders() +
+  tm_grid()
+
+
+squares32_5x5 <- squares32 %>% st_centroid() %>% 
+  st_buffer(dist=2500, endCapStyle="SQUARE")
+
+squares32_5x5_sp <- as(squares32_5x5, "Spatial")
+squares_5x5_sp <- sp::spTransform(squares32_5x5_sp, raster::crs(bird_count_sf))
+squares_5x5_sf <- squares_5x5_sp %>% st_as_sf()
+raster::crs(squares_5x5_sf)
+
+
+# over() to match up points and polygons
+intersect_bird_count_squares_5x5 <- sp::over(squares_5x5_sp, bird_count_sp)
+intersect_bird_count_squares_5x5 <- intersect_bird_count_squares_5x5 %>% tibble()
+intersect_bird_count_squares_5x5 %>% nrow() # 12334
+intersect_bird_count_squares_5x5 %>% filter(!is.na(rid)) %>% nrow() # 2846 (23.1% intersected)
+
+# make sf 
+intersect_bird_count_squares_5x5 <- intersect_bird_count_squares_5x5 %>% filter(!is.na(rid))
+intersect_bird_count_squares_5x5_sf <- intersect_bird_count_squares_5x5 %>%
+  inner_join((bird_count_sites %>% select(rid,lon,lat)), by="rid") %>% 
+  st_as_sf(coords = c("lon","lat"), crs = 4326)
+
+# visualise the intersected points
+intersect_bird_count_transect_squares_map_5x5 <-tm_shape(squares_5x5_sf) +
+  tm_borders() +
+  tm_shape(bird_count_sf) +
+  tm_dots(col="red", alpha=0.7) +
+  tm_shape(intersect_bird_count_squares_5x5_sf) +
+  tm_dots(col="cyan", alpha=0.7) +
+  tm_grid() +
+  tm_layout(legend.outside = TRUE, main.title = "Intersection of CS bird counts and bird atlas transect squares", main.title.size = 1) +
+  tm_credits(text="Intersected points denoted by cyan", position="left")
+# tmap_save(tm = intersect_bird_count_transect_squares_map_5x5,
+#           filename = paste0("output", "/", "intersect_bird_count_transect_squares_5x5_highlighted.png"))
+# rm(intersect_bird_count_transect_squares_map_5x5)
 
 
 
