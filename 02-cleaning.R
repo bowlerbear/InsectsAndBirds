@@ -58,6 +58,7 @@ num_type_year_bird_atlas_bar <- bird_atlas %>%
   ggplot() + 
   geom_bar(aes(x=year, y=n, fill=type), stat="identity", position="dodge") +
   ylab("number") + 
+  theme_bw() +
   ggtitle("Number of samples per year, grouped by type, in bird atlas")
 # ggsave(filename = paste0("output", "/", "num_type_year_bird_atlas.png"), num_type_year_bird_atlas_bar)
 # rm(num_type_year_bird_atlas_bar)
@@ -74,16 +75,22 @@ transect_info <- transect_info %>%
          year = lubridate::year(dato)) 
 
 
+# # merge bird atlas sen with transect info
+# bird_atlas_sen %>% 
+#   inner_join(transect_info %>% filter(type=="sen") %>% select(-c(id, type, dato, year)), by="kvadratnr")
+
+
 # check no. of kvadratnr sampled each year 
 # how many kvadratnr were sampled each year (bird_atlas)
 num_kvadratnr_per_year_bar <- bird_atlas %>% 
   group_by(year) %>% 
   summarise(number_of_unique_kvadratnr = n_distinct(kvadratnr)) %>% 
   ggplot() +
-  geom_col(aes(x=year, y=number_of_unique_kvadratnr)) +
+  geom_col(aes(x=year, y=number_of_unique_kvadratnr), fill="steelblue") +
   ylab("number") + 
-  ggtitle("Number of unique kvadratnr sampled per year")
-# ggsave(filename = paste0("output", "/", "num_unique_kvadratnr_per_year.png"), num_kvadratnr_per_year_bar)
+  theme_bw() +
+  ggtitle("Number of unique kvadratnr sampled per year (bird atlas)")
+# ggsave(filename = paste0("output", "/", "num_unique_kvadratnr_per_year_bird_atlas.png"), num_kvadratnr_per_year_bar)
 # rm(num_kvadratnr_per_year_bar)
 
 # subset sen (bird_atlas)
@@ -92,10 +99,11 @@ num_kvadratnr_per_year_sen_bar <- bird_atlas %>%
   group_by(year) %>% 
   summarise(number_of_unique_kvadratnr = n_distinct(kvadratnr)) %>% 
   ggplot() +
-  geom_col(aes(x=year, y=number_of_unique_kvadratnr)) +
+  geom_col(aes(x=year, y=number_of_unique_kvadratnr), fill="steelblue") +
   ylab("number") + 
-  ggtitle("Number of unique kvadratnr sampled per year (only type = sen)")
-# ggsave(filename = paste0("output", "/", "num_unique_kvadratnr_per_year_sen.png"), num_kvadratnr_per_year_sen_bar)
+  theme_bw() +
+  ggtitle("Number of unique kvadratnr sampled per year (only type == sen) (bird atlas)")
+# ggsave(filename = paste0("output", "/", "num_unique_kvadratnr_per_year_sen_bird_atlas.png"), num_kvadratnr_per_year_sen_bar)
 # rm(num_kvadratnr_per_year_sen_bar)
 
 
@@ -194,6 +202,11 @@ bird_count_sites_diff_sf <- setdiff(bird_count_sites_sf,intersection_bird_count_
 bird_count_sites_sf %>% nrow() # 3821
 intersection_bird_count_sites_squares_sf %>% nrow() # 3156 (82.6%)
 
+# save only the original columns and kvadratnr
+intersection_bird_count_sites_squares_sf <- intersection_bird_count_sites_squares_sf %>% 
+  select(c(colnames(bird_count_sites_sf), "kvadratnr"))
+
+
 # visualise the count sites the fall within the transect grid
 intersection_bird_count_sites_squares_map <- tm_shape(squares_5x5_sf) +
   tm_borders() +
@@ -203,18 +216,14 @@ intersection_bird_count_sites_squares_map <- tm_shape(squares_5x5_sf) +
   tm_shape(intersection_bird_count_sites_squares_sf) +
   tm_dots(col="cyan", alpha=0.7) +
   tm_grid() + 
-  tm_layout(main.title = "Intersection of CS bird count sites (all) and bird atlas transect squares", main.title.size = 1) +
+  tm_layout(main.title = "Intersection of CS bird count sites (all) and bird atlas transect squares (all)", main.title.size = 1) +
   tm_credits(text="Intersected points denoted by cyan (82.6% of the sites)", position="left")
 # tmap_save(tm = intersection_bird_count_sites_squares_map,
 #           filename = paste0("output", "/", "intersection_bird_count_sites_and_transect_squares_5x5.png"))
 # rm(intersection_bird_count_sites_squares_map)
 
-# save only the original columns and kvadratnr
-intersection_bird_count_sites_squares_sf <- intersection_bird_count_sites_squares_sf %>% 
-  select(c(colnames(bird_count_sites_sf), "kvadratnr"))
 
-
-# subset reference grid
+# subset reference grid (sen)
 squares_5x5_sen_sf <- squares_5x5_sf %>% 
   inner_join(bird_atlas %>% filter(type=="sen") %>% 
                select(c(kvadratnr, type)), by="kvadratnr")
@@ -225,6 +234,10 @@ squares_5x5_sen_sf <- squares_5x5_sen_sf %>%                       # change the 
   tibble() %>% 
   st_as_sf() %>% 
   filter(!is.na(kvadratnr))
+
+# squares_5x5_sen_sf_2 <- squares_5x5_sf %>% 
+#   inner_join(transect_info %>% filter(type=="sen") %>% 
+#                select(c(kvadratnr, type)), by="kvadratnr")
 
 
 
@@ -255,11 +268,6 @@ bird_count_merged <- bird_count %>%
   inner_join(bird_count_sites %>% select(c(rid, lon, lat)), by="rid") %>% 
   inner_join(species_codes, by="artnr")
 
-
-# subset -- late breeding
-bird_count_merged <- filter(bird_count_merged, season=="SY")
-
-
 # format date and year
 bird_count_merged <- bird_count_merged %>%
   rename(date = tdate) %>%
@@ -270,23 +278,29 @@ bird_count_merged <- bird_count_merged %>%
 table(bird_count_merged$year) # from 2016 on
 
 
+# subset -- late breeding
+bird_count_merged_sen <- bird_count_merged %>% 
+  filter(season=="SY") %>% 
+  filter(kvadratnr %in% squares_5x5_sen_sf$kvadratnr) # ensure it contains also only the sen subset of kvadratnr
+
+
 # make bird_count spatial
-bird_count_sf <- st_as_sf(bird_count_merged, coords = c("lon","lat"), crs = 4326)
+bird_count_sen_sf <- st_as_sf(bird_count_merged_sen , coords = c("lon","lat"), crs = 4326)
 
 # plot and check
-tm_shape(bird_count_sf) +
+tm_shape(bird_count_sen_sf) +
   tm_dots("rid") +
   tm_grid()
 
 
-# look for the outliers
-bird_count_merged %>% ggplot() +
-  aes(x="", y=lat) +
-  geom_boxplot(fill = "#0c4c8a")
-
-bird_count_merged %>% ggplot() +
-  aes(x = lat) +
-  geom_histogram(bins = 30L, fill = "#0c4c8a")
+# # look for the outliers
+# bird_count_merged_sen %>% ggplot() +
+#   aes(x="", y=lat) +
+#   geom_boxplot(fill = "#0c4c8a")
+# 
+# bird_count_merged_sen %>% ggplot() +
+#   aes(x = lat) +
+#   geom_histogram(bins = 30L, fill = "#0c4c8a")
 #
 # bird_count_merged %>%
 #   filter(lat < 10) %>%
@@ -304,12 +318,12 @@ bird_count_merged %>% ggplot() +
 # 
 # # make spatial
 # bird_count_sf <- st_as_sf(bird_count_merged, coords = c("lon","lat"), crs = 4326)
-
-# plot and check
-tm_shape(bird_count_sf) +
-  tm_dots("red") +
-  tm_grid() +
-  tm_layout(legend.outside = TRUE, main.title = "Bird count locations (SY) (fall within reference grid)")
+#
+# # plot and check
+# tm_shape(bird_count_sf) +
+#   tm_dots("red") +
+#   tm_grid() +
+#   tm_layout(legend.outside = TRUE, main.title = "Bird count locations (SY) (fall within reference grid)")
 # tmap_save(tm = bird_count_map,
 #           filename = paste0("output", "/", "bird_count_map.png"))
 # rm(bird_count_map)
