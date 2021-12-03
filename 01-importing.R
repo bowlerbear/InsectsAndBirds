@@ -109,6 +109,7 @@ species_codes <- read.csv("data/Insects_and_TTT/species_codes.csv",sep=";") %>% 
 # =================== insect routes =================== 
 # read in insekt mobile routes
 insect_routes2018 <- st_read(dsn = "data/InsektMobile_routes/ruter_2018_2019_final", layer = "finalRoutes2018")
+insect_routes2019 <- st_read(dsn = "data/InsektMobile_routes/ruter_2018_2019_final", layer = "finalRoutes2019")
 
 
 

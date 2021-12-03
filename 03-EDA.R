@@ -32,6 +32,7 @@ num_kvadratnr_per_year_bar <- bird_count_merged_sen %>%
 
 
 bird_count_merged_sen
+
 bird_atlas_sen
 
 
