@@ -187,7 +187,7 @@ squares_5x5_sf <- rbind(squares32_5x5_sf, squares33_5x5_sf)
 
 
 # assign kvadratnr to bird_count_sites
-intersection_bird_count_sites_squares_sf <- st_join(bird_count_sites_sf, squares_5x5_sf, left=F)
+intersection_bird_count_sites_squares_sf <- st_join(bird_count_sites_sf, squares_5x5_sf, left=F)  # left=F: inner join
 intersection_bird_count_sites_squares_sf <- intersection_bird_count_sites_squares_sf %>% 
   distinct() # subset distinct rows
 
@@ -331,37 +331,54 @@ tm_shape(bird_count_sen_sf) +
 
 
 
-# =================== insect routes =================== 
-tm_shape(insect_routes2018) +
-  tm_lines() +
-  tm_grid()
+# =================== assign kvadratnr in bird_count_sites to insect routes =================== 
+# subset bird count points (type==sen only) sf by year 2018 and 2019
+bird_count_sen_201819_sf <- bird_count_merged_sen %>% 
+  filter(year %in% c(2018,2019)) %>% 
+  st_as_sf(coords = c("lon","lat"), crs = 4326)
 
-tm_shape(insect_routes2019) +
-  tm_lines() +
-  tm_grid()
 
-# reproject squares32 from utm to longlat
+# reproject insect_routes from utm to longlat
 raster::crs(insect_routes2018)
-insect_routes2018_sf <- sf::st_transform(insect_routes2018, crs=raster::crs(squares_5x5_sen_sf))
+insect_routes2018_sf <- sf::st_transform(insect_routes2018, crs=raster::crs(bird_count_sen_201819_sf))
 raster::crs(insect_routes2018_sf)
 
 raster::crs(insect_routes2019)
-insect_routes2019_sf <- sf::st_transform(insect_routes2019, crs=raster::crs(squares_5x5_sen_sf))
+insect_routes2019_sf <- sf::st_transform(insect_routes2019, crs=raster::crs(bird_count_sen_201819_sf))
 raster::crs(insect_routes2019_sf)
 
 
-# assign kvadratnr to insect_routes2018
-intersection_insect_routes2018_squares_sf <- st_join(insect_routes2018_sf, squares_5x5_sen_sf, 
-                                                       join = st_within, left=F # inner join
-                                                       )
+# quick check
+tm_shape(insect_routes2018) +
+  tm_lines(col="red") +
+  tm_shape(bird_count_sen_201819_sf) +
+  tm_dots() +
+  tm_grid()
+
+tm_shape(insect_routes2019) +
+  tm_lines(col="red") +
+  tm_shape(bird_count_sen_201819_sf) +
+  tm_dots() +
+  tm_grid()
+
+
+# get the required grid
+squares_5x5_sen_bird_count_201819_sf <- squares_5x5_sen_sf %>% 
+  filter(kvadratnr %in% bird_count_sen_201819_sf$kvadratnr)
+
+
+# assign kvadratnr (from bird count points year 2018 and 2019) to insect_routes2018
+intersection_insect_routes2018_squares_sf <- st_join(insect_routes2018_sf, squares_5x5_sen_bird_count_201819_sf, 
+                                                         join = st_within, left=F # inner join
+                                                         )
 
 # check number of lines within grid (one line within one grid cell)
 insect_routes2018_sf %>% nrow() # 343
-intersection_insect_routes2018_squares_sf %>% nrow() # 289 (84.5%)
+intersection_insect_routes2018_squares_sf %>% nrow() # 78 (22.7%)
 
 
 # plot grid and insect_routes2018
-intersection_insect_routes2018_squares_map <- tm_shape(squares_5x5_sen_sf) +
+intersection_insect_routes2018_squares_map <- tm_shape(squares_5x5_sen_bird_count_201819_sf) +
   tm_borders() +
   tm_fill(col="kvadratnr") +
   tm_shape(insect_routes2018_sf) +
@@ -369,25 +386,25 @@ intersection_insect_routes2018_squares_map <- tm_shape(squares_5x5_sen_sf) +
   tm_shape(intersection_insect_routes2018_squares_sf) +
   tm_lines(col="cyan") +
   tm_grid() + 
-  tm_layout(main.title = "Intersection of insect routes (2018) and bird atlas transect squares (sen)", main.title.size = 1) +
-  tm_credits(text="Routes within individual grid cells denoted by cyan (84.5% of the routes)", position="left")
+  tm_layout(main.title = "Intersection of insect routes (2018) and bird count transect squares (sen)", main.title.size = 1) +
+  tm_credits(text="Routes within individual grid cells denoted by cyan (22.7% of the routes)", position="left")
 # tmap_save(tm = intersection_insect_routes2018_squares_map,
 #           filename = paste0("output", "/", "intersection_insect_routes2018_and_transect_squares_5x5.png"))
 # rm(intersection_insect_routes2018_squares_map)
 
 
 # assign kvadratnr to insect_routes2019
-intersection_insect_routes2019_squares_sf <- st_join(insect_routes2019_sf, squares_5x5_sen_sf, 
-                                                       join = st_within, left=F # inner join
+intersection_insect_routes2019_squares_sf <- st_join(insect_routes2019_sf, squares_5x5_sen_bird_count_201819_sf, 
+                                                     join = st_within, left=F # inner join
                                                      )
 
 # check number of lines within grid (one line within one grid cell)
 insect_routes2019_sf %>% nrow() # 404
-intersection_insect_routes2019_squares_sf %>% nrow() # 333 (82.4%)
+intersection_insect_routes2019_squares_sf %>% nrow() # 83 (20.5)
 
 
 # plot grid and insect_routes2019
-intersection_insect_routes2019_squares_map <- tm_shape(squares_5x5_sen_sf) +
+intersection_insect_routes2019_squares_map <- tm_shape(squares_5x5_sen_bird_count_201819_sf) +
   tm_borders() +
   tm_fill(col="kvadratnr") +
   tm_shape(insect_routes2019_sf) +
@@ -395,33 +412,11 @@ intersection_insect_routes2019_squares_map <- tm_shape(squares_5x5_sen_sf) +
   tm_shape(intersection_insect_routes2019_squares_sf) +
   tm_lines(col="cyan") +
   tm_grid() + 
-  tm_layout(main.title = "Intersection of insect routes (2019) and bird atlas transect squares (sen)", main.title.size = 1) +
-  tm_credits(text="Routes within individual grid cells denoted by cyan (82.4% of the routes)", position="left")
+  tm_layout(main.title = "Intersection of insect routes (2019) and bird count transect squares (sen)", main.title.size = 1) +
+  tm_credits(text="Routes within individual grid cells denoted by cyan (20.5% of the routes)", position="left")
 # tmap_save(tm = intersection_insect_routes2019_squares_map,
 #           filename = paste0("output", "/", "intersection_insect_routes2019_and_transect_squares_5x5.png"))
 # rm(intersection_insect_routes2019_squares_map)
 
-
-# no. of kvadratnr sampled each year in insect routes
-# merge the sfs of the two years together
-intersection_insect_routes2018_squares_sf$year <- "2018"
-intersection_insect_routes2019_squares_sf$year <- "2019"
-
-intersection_insect_routes_squares_sf <- rbind(intersection_insect_routes2018_squares_sf %>% 
-                                                 select(c(OBJECTID, kvadratnr, geometry, year)),
-                                               intersection_insect_routes2019_squares_sf %>% 
-                                                 select(c(OBJECTID, kvadratnr, geometry, year))
-                                               )
-
-num_kvadratnr_per_year_bar <- intersection_insect_routes_squares_sf %>% 
-  group_by(year) %>% 
-  summarise(number_of_unique_kvadratnr = n_distinct(kvadratnr)) %>% 
-  ggplot() +
-  geom_col(aes(x=year, y=number_of_unique_kvadratnr), fill="steelblue") +
-  ylab("number") + 
-  theme_bw() +
-  ggtitle("Number of unique kvadratnr sampled per year (only type == sen) (insect routes)")
-# ggsave(filename = paste0("output", "/", "num_unique_kvadratnr_per_year_sen_insect_routes.png"), num_kvadratnr_per_year_bar)
-# rm(num_kvadratnr_per_year_bar)
 
 

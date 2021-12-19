@@ -37,3 +37,30 @@ bird_atlas_sen
 
 
 
+# =================== match bird point count (SY) to reference grid (sen), and then to insect routes =================== 
+# no. of kvadratnr sampled each year in insect routes
+# merge the sfs of the two years together
+intersection_insect_routes2018_squares_sf$year <- "2018"
+intersection_insect_routes2019_squares_sf$year <- "2019"
+
+intersection_insect_routes_squares_sf <- rbind(intersection_insect_routes2018_squares_sf %>% 
+                                                 select(c(OBJECTID, kvadratnr, geometry, year)),
+                                               intersection_insect_routes2019_squares_sf %>% 
+                                                 select(c(OBJECTID, kvadratnr, geometry, year))
+                                               )
+
+num_kvadratnr_per_year_bar <- intersection_insect_routes_squares_sf %>% 
+  group_by(year) %>% 
+  summarise(number_of_unique_kvadratnr = n_distinct(kvadratnr)) %>% 
+  ggplot() +
+  geom_col(aes(x=year, y=number_of_unique_kvadratnr), fill="steelblue") +
+  ylab("number") + 
+  theme_bw() +
+  ggtitle("Number of unique kvadratnr sampled per year (only type == sen) (insect routes)")
+# ggsave(filename = paste0("output", "/", "num_unique_kvadratnr_per_year_sen_insect_routes.png"), num_kvadratnr_per_year_bar)
+# rm(num_kvadratnr_per_year_bar)
+
+
+
+
+
