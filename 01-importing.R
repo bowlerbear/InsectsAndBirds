@@ -110,6 +110,12 @@ species_codes <- read.csv("data/Insects_and_TTT/species_codes.csv",sep=";") %>% 
 # read in insekt mobile routes
 insect_routes2018 <- st_read(dsn = "data/InsektMobile_routes/ruter_2018_2019_final", layer = "finalRoutes2018")
 insect_routes2019 <- st_read(dsn = "data/InsektMobile_routes/ruter_2018_2019_final", layer = "finalRoutes2019")
+insect_routes_mapping <- read_delim("data/InsektMobile_routes/insect_routes_mapping.txt", delim="\t", skip=1, col_names=F) %>% 
+  select(-X1) %>% 
+  rename(PID = X2,
+         DOFAtlasQuadrantID = X3) %>% 
+  rename(kvadratnr=DOFAtlasQuadrantID)
+
 
 
 
