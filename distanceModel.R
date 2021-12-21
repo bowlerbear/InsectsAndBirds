@@ -1,13 +1,10 @@
 library(AHMbook)
 library(tidyverse)
 library(lubridate)
+library(unmarked)
+library(ggthemes)
 
 ### DOF data #####
-
-species <- c("Alauda arvensis", "Perdix perdix", 
-               "Passer domesticus", "Passer montanus",
-               "Fringilla coelebs","Hirundo rustica")
-myspecies <- species[6]
 
 #read in bird observation data - counts of birds using distance sampling
 data <- read.csv("data/Insects_and_TTT/ttt_data.csv",sep=";")
@@ -17,10 +14,30 @@ info <- read.csv("data/Insects_and_TTT/ttt_info.csv",sep=";")
 info$Date <- as.Date(info$dato)
 info$Year <- year(info$Date)
 
+#when was each species most often seen
+speciesSummary <- data %>%
+                    dplyr::filter(type!="vinter") %>%
+                    dplyr::group_by(latin,overartnr.x,artnr,type) %>%
+                    dplyr::summarise(total=sum(X.0)+sum(X.1)+sum(X.2)) %>%
+                    dplyr::group_by(latin,overartnr.x,artnr,) %>%
+                    dplyr::summarise(type=type[total==max(total)])
+write.csv(speciesSummary,file="outputs/species_max_season.csv",row.names=FALSE)
+
+#select species
+
+species <- c("Alauda arvensis", "Perdix perdix", 
+               "Passer domesticus", "Passer montanus",
+               "Fringilla coelebs","Hirundo rustica")
+myspecies <- species[4]
+
 #start with just the last year of data
 infoS <- info %>%
             filter(Year==2016) %>%
             select(-id)
+
+### function ####
+
+fitModel <- function(myspecies){
 
 #and just one species
 dataS <- data %>% 
@@ -72,10 +89,7 @@ procData <- allData %>%
 # gof_ds(ds_hn)
 # summarize_ds_models(ds_hn, ds_hr, ds_uni, output="plain")
 
-
 ### unmarked ####
-
-library(unmarked)
 
 temp <- allData[,c("X.0","X.1","X.2")]
 temp[is.na(temp)] <- 0
@@ -104,12 +118,107 @@ tab <- as(tab,'data.frame')
 ggplot(tab)+
     geom_col(aes(x=model,y=AIC))
 
-#see also 
-#gdistsamp
-
 ### covariates ####
 
+#load in environ data
 
+#line data - factor affecting detectability
+lines <- readRDS("environ-data/lines.rds")
+names(lines)[5:12] <- sapply(names(lines)[5:12], function(x){
+  paste0("lines_",x)})
+lines$lines_path <- lines$lines_path/lines$lines_mapped
+lines$lines_road <- lines$lines_road/lines$lines_mapped
+allData <- inner_join(allData,lines[,c("kvadratnr","lines_path","lines_road")])
+hist(allData$lines_path)
+hist(allData$lines_road)
+
+#buffer data - factors affecting abundance
+squares <- readRDS("environ-data/squares_buffer_1km.rds")
+names(squares)[4:9] <- sapply(names(squares)[4:9], function(x){
+  paste0("squares_",x)})
+squares$squares_forest <- squares$squares_forest/squares$squares_mapped
+squares$squares_agri_int <- squares$squares_agri_int/squares$squares_mapped
+allData <- inner_join(allData,squares[,c("kvadratnr","squares_forest","squares_agri_int")])
+hist(allData$squares_forest)
+hist(allData$squares_agri_int)
+qplot(squares_forest,squares_agri_int, data=allData)
+
+#distance data
+temp <- allData[,c("X.0","X.1","X.2")]
+temp[is.na(temp)] <- 0
+
+#covariates
+covariates <- data.frame(scale(allData[,c("skydaekke","regn","vind",
+                                          "lines_path","lines_road",
+                                          "squares_forest","squares_agri_int")]))
+
+#format data frame
+unmarkDF <- unmarkedFrameDS(y=as.matrix(temp),
+                            siteCovs= covariates,
+                            dist.breaks=c(0,25,50,100), 
+                            tlength=rep(100,nrow(allData)),
+                            unitsIn="m", 
+                            survey="line")
+
+#run models
+(fm1 <- distsamp(~lines_path +lines_road ~squares_forest + squares_agri_int, 
+                 data = unmarkDF, keyfun = "halfnorm"))
+
+
+
+#(fm2 <- distsamp(~lines_path +lines_road ~squares_forest + squares_agri_int, 
+#                  data = unmarkDF, keyfun = "hazard"))
+
+#organise output
+stateDF <- data.frame(Species = myspecies,
+                      param = names(coef(fm1,type='state')),
+                      coef = as.numeric(coef(fm1,type='state')),
+                      coef_se = as.numeric(SE(fm1,type='state')))[-1,]
+
+ggplot(stateDF)+
+  geom_crossbar(aes(x=param, y=coef, ymin=coef-coef_se, ymax=coef+coef_se))+
+  theme_few() +
+  geom_hline(yintercept=0, linetype="dashed") + coord_flip()
+
+detectionDF <- data.frame(Species = myspecies,
+                      param = names(coef(fm1,type='det')),
+                      coef = as.numeric(coef(fm1,type='det')),
+                      coef_se = as.numeric(SE(fm1,type='det')))[-1,]
+
+ggplot(detectionDF)+
+  geom_crossbar(aes(x=param, y=coef, ymin=coef-coef_se, ymax=coef+coef_se))+
+  theme_few() +
+  geom_hline(yintercept=0, linetype="dashed") + coord_flip()
+
+return(stateDF)
+
+}
+
+### apply function ####
+
+detectionDF <- bind_rows(fitModel(species[1]),fitModel(species[2]),
+                         fitModel(species[3]),fitModel(species[4]),
+                         fitModel(species[5]),fitModel(species[6]))
+
+
+ggplot(detectionDF)+
+  geom_crossbar(aes(x=Species,y=coef,ymin=coef-coef_se,ymax=coef+coef_se))+
+  facet_wrap(~param,scales="free_y")+coord_flip()+theme_few()+
+  geom_hline(yintercept=0,linetype="dashed")
+
+
+
+stateDF <- bind_rows(fitModel(species[1]),fitModel(species[2]),
+                         fitModel(species[3]),fitModel(species[4]),
+                         fitModel(species[5]),fitModel(species[6]))
+
+
+ggplot(stateDF)+
+  geom_crossbar(aes(x=Species,y=coef,ymin=coef-coef_se,ymax=coef+coef_se))+
+  facet_wrap(~param,scales="free_y")+coord_flip()+theme_few()+
+  geom_hline(yintercept=0,linetype="dashed")
+#see also 
+#gdistsamp
 
 ### JAGS ####
 
