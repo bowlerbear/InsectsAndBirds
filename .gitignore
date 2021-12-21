@@ -46,3 +46,6 @@ environ-data/*
 
 #ignore all data file
 data/*
+
+#ignore model outputs
+outputs/*
