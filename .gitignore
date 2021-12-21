@@ -49,3 +49,5 @@ data/*
 
 #ignore model outputs
 outputs/*
+output/
+
